@@ -46,7 +46,7 @@ interface Cycle {
   id: number
   nombre_ciclo: string
   fecha_inicio: string
-  fecha_fin: string | null
+  fecha_fin?: string | null
   estado: 'activo' | 'terminado'
 }
 

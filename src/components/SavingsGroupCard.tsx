@@ -40,7 +40,7 @@ interface SavingsGroupCardProps {
       id: number
       nombre_ciclo: string
       estado: 'activo' | 'terminado'
-      fecha_inicio?: string
+      fecha_inicio: string
       fecha_fin?:string | null
     }>
   }
