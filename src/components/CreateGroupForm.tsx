@@ -61,17 +61,24 @@ export function CreateGroupForm({ onSuccess, initialData, groupId }: CreateGroup
       mes_creacion: initialData?.mes_creacion || new Date().getMonth() + 1,
       tipo_ahorro: initialData?.tipo_ahorro || 'Simple',
       duracion_ciclo: initialData?.duracion_ciclo || 12,
-      numero_total_miembros: initialData?.numero_total_miembros || (initialData?.numero_total_miembros === 0 ? 0 : undefined),
-      cantidad_hombres: initialData?.cantidad_hombres || (initialData?.cantidad_hombres === 0 ? 0 : undefined),
-      cantidad_mujeres: initialData?.cantidad_mujeres || (initialData?.cantidad_mujeres === 0 ? 0 : undefined),
-      cantidad_ninos: initialData?.cantidad_ninos || (initialData?.cantidad_ninos === 0 ? 0 : undefined),
-      cantidad_ninas: initialData?.cantidad_ninas || (initialData?.cantidad_ninas === 0 ? 0 : undefined),
+      numero_total_miembros: initialData?.numero_total_miembros ?? 0,
+      cantidad_hombres: initialData?.cantidad_hombres ?? 0,
+      cantidad_mujeres: initialData?.cantidad_mujeres ?? 0,
+      cantidad_ninos: initialData?.cantidad_ninos ?? 0,
+      cantidad_ninas: initialData?.cantidad_ninas ?? 0,
       ano_creacion: initialData?.ano_creacion || new Date().getFullYear(),
       grupo_juvenil: initialData?.grupo_juvenil || false,
       ciudad_operacion: initialData?.ciudad_operacion || '',
       pais_operacion: initialData?.pais_operacion || 'Colombia',
     },
   })
+
+  const paisOperacion = form.watch('pais_operacion')
+
+  const citiesByCountry: Record<string, string[]> = {
+    Colombia: ['Barranquilla', 'Arauca'],
+    Venezuela: ['Maracaibo', 'Barquisimeto'],
+  }
 
   // Auto-calculate total members
   useEffect(() => {
@@ -181,9 +188,24 @@ export function CreateGroupForm({ onSuccess, initialData, groupId }: CreateGroup
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Ciudad de Operación</FormLabel>
-                <FormControl>
-                  <Input placeholder="Ej: Bogotá" {...field} />
-                </FormControl>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                  key={paisOperacion} // Force re-render when country changes
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una ciudad" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {(citiesByCountry[paisOperacion] || []).map((city) => (
+                      <SelectItem key={city} value={city}>
+                        {city}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

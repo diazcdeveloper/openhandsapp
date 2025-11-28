@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -58,9 +58,11 @@ export function UpdatePurposeDialog({
   })
 
   // Reset form when opening with new data
-  if (open && form.getValues().proposito !== currentPurpose && !form.formState.isDirty) {
-    form.reset({ proposito: currentPurpose })
-  }
+  useEffect(() => {
+    if (open && currentPurpose) {
+      form.reset({ proposito: currentPurpose })
+    }
+  }, [open, currentPurpose, form])
 
   async function onSubmit(values: FormValues) {
     setLoading(true)

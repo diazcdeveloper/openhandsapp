@@ -36,6 +36,11 @@ export function SaverSidebar({ className }: SaverSidebarProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [open, setOpen] = useState(false)
   const [showProfileDialog, setShowProfileDialog] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const getUser = async () => {
@@ -160,6 +165,10 @@ export function SaverSidebar({ className }: SaverSidebarProps) {
       )}
     </div>
   )
+
+  if (!mounted) {
+    return null
+  }
 
   return (
     <>
