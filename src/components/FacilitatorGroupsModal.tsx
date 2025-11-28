@@ -27,6 +27,7 @@ interface SavingsGroup {
   grupo_juvenil?: boolean
   ciclos_ahorro: {
     id: number
+    nombre_ciclo: string
     estado: 'activo' | 'terminado'
     fecha_inicio?: string
     fecha_fin?: string | null
@@ -55,6 +56,7 @@ export function FacilitatorGroupsModal({
           grupo_juvenil,
           ciclos_ahorro (
             id,
+            nombre_ciclo,
             estado,
             fecha_inicio,
             fecha_fin
