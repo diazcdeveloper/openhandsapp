@@ -245,6 +245,7 @@ export function CreateGroupForm({ onSuccess, initialData, groupId }: CreateGroup
                 <FormControl>
                   <Input 
                     type="number" 
+                    min={0}
                     {...field} 
                     onChange={(e) => field.onChange(parseInt(e.target.value))}
                   />
@@ -293,6 +294,7 @@ export function CreateGroupForm({ onSuccess, initialData, groupId }: CreateGroup
                 <FormControl>
                   <Input 
                     type="number" 
+                    min={0}
                     {...field} 
                     onChange={(e) => field.onChange(parseInt(e.target.value))}
                   />
@@ -315,6 +317,7 @@ export function CreateGroupForm({ onSuccess, initialData, groupId }: CreateGroup
                   <FormControl>
                     <Input 
                       type="number" 
+                      min={0}
                       placeholder="0"
                       {...field} 
                       onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
@@ -334,6 +337,7 @@ export function CreateGroupForm({ onSuccess, initialData, groupId }: CreateGroup
                   <FormControl>
                     <Input 
                       type="number" 
+                      min={0}
                       placeholder="0"
                       {...field} 
                       onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
@@ -353,6 +357,7 @@ export function CreateGroupForm({ onSuccess, initialData, groupId }: CreateGroup
                   <FormControl>
                     <Input 
                       type="number" 
+                      min={0}
                       placeholder="0"
                       {...field} 
                       onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
@@ -372,6 +377,7 @@ export function CreateGroupForm({ onSuccess, initialData, groupId }: CreateGroup
                   <FormControl>
                     <Input 
                       type="number" 
+                      min={0}
                       placeholder="0"
                       {...field} 
                       onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}

@@ -47,6 +47,8 @@ export default function LoginPage() {
           // Redirect based on role
           if (userData.rol === 'coordinador') {
             router.push('/coordinator-dashboard')
+          } else if (userData.rol === 'director') {
+            router.push('/director-dashboard')
           } else if (userData.rol === 'ahorrador') {
             router.push('/saver-dashboard')
           } else {

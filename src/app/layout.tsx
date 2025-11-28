@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   description: "App para la Fundación Open Hands",
 };
 
+import { AuthProvider } from "@/context/AuthContext";
+import { FocusRefresher } from "@/components/FocusRefresher";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -18,8 +21,11 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${inter.className} antialiased`} suppressHydrationWarning>
-        {children}
-        <Toaster />
+        <AuthProvider>
+          <FocusRefresher />
+          {children}
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

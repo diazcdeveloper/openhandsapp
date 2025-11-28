@@ -208,6 +208,7 @@ export function CreateReportDialog({ open, onOpenChange, onSuccess, userId, init
                     <FormControl>
                       <Input
                         type="number"
+                        min={0}
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value))}
                       />
@@ -262,6 +263,7 @@ export function CreateReportDialog({ open, onOpenChange, onSuccess, userId, init
                   <FormControl>
                     <Input
                       type="number"
+                      min={0}
                       placeholder="0"
                       {...field}
                       onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
@@ -281,6 +283,7 @@ export function CreateReportDialog({ open, onOpenChange, onSuccess, userId, init
                   <FormControl>
                     <Input
                       type="number"
+                      min={0}
                       step="0.01"
                       placeholder="0.00"
                       {...field}

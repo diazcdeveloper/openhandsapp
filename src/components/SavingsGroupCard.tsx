@@ -38,6 +38,7 @@ interface SavingsGroupCardProps {
     grupo_juvenil?: boolean
     ciclos_ahorro?: Array<{
       id: number
+      nombre_ciclo: string
       estado: 'activo' | 'terminado'
       fecha_inicio?: string
       fecha_fin?:string | null
@@ -241,6 +242,7 @@ export function SavingsGroupCard({ group, onUpdate }: SavingsGroupCardProps) {
         onOpenChange={setCycleDialogOpen}
         groupId={group.id}
         groupName={group.nombre_grupo}
+        existingCycle={cycle}
         onSuccess={handleCycleSuccess}
       />
 
