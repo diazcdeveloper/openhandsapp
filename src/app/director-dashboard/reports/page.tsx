@@ -17,6 +17,7 @@ interface Report {
   id: number
   mes: number
   ano: number
+  grupo_id: number
   numero_reuniones: number
   promedio_asistencia: number | null
   cantidad_ahorrada: number
