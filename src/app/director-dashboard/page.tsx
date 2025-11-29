@@ -26,6 +26,7 @@ interface DashboardStats {
 export default function DirectorDashboardPage() {
   const { user } = useAuth()
   const [directorName, setDirectorName] = useState<string>('')
+  const [directorCountry, setDirectorCountry] = useState<string>('')
   const [stats, setStats] = useState<DashboardStats>({
     facilitatorsCount: 0,
     groupsCount: 0,
@@ -48,6 +49,7 @@ export default function DirectorDashboardPage() {
       if (directorData) {
         setDirectorName(`${directorData.nombre} ${directorData.apellido}`)
         const country = directorData.pais_residencia
+        setDirectorCountry(country || '')
 
         if (country) {
           // 1. Count Facilitators in the country
@@ -140,7 +142,9 @@ export default function DirectorDashboardPage() {
   return (
     <div className="p-8 pt-20 md:pt-8 space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard de Director</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Dirección de {directorCountry || 'País'}
+        </h1>
         <p className="text-muted-foreground">
           Bienvenido, {directorName}
         </p>

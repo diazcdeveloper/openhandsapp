@@ -15,6 +15,7 @@ interface GroupStats {
 export default function CoordinatorDashboardPage() {
   const [facilitatorCount, setFacilitatorCount] = useState<number | null>(null)
   const [coordinatorName, setCoordinatorName] = useState<string>('')
+  const [coordinatorZone, setCoordinatorZone] = useState<string>('')
   const [groupStats, setGroupStats] = useState<GroupStats>({
     total: 0,
     withoutCycle: 0,
@@ -36,6 +37,7 @@ export default function CoordinatorDashboardPage() {
 
       if (coordinatorData) {
         setCoordinatorName(`${coordinatorData.nombre} ${coordinatorData.apellido}`)
+        setCoordinatorZone(coordinatorData.zona_coordinacion || '')
 
         if (coordinatorData.zona_coordinacion) {
           // Count facilitators in the same zone
@@ -106,7 +108,9 @@ export default function CoordinatorDashboardPage() {
   return (
     <div className="p-8 pt-20 md:pt-8 space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard de Coordinador</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Coordinación de {coordinatorZone || 'Zona'}
+        </h1>
         <p className="text-muted-foreground">
           Bienvenido, {coordinatorName}
         </p>

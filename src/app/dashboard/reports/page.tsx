@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, FileText, Calendar, Users, TrendingUp, Edit, Trash2, Loader2 } from 'lucide-react'
 import { CreateReportDialog } from '@/components/CreateReportDialog'
 import {
@@ -25,11 +27,13 @@ interface Report {
   mes: number
   grupo_id: number
   numero_reuniones: number
+  promedio_asistencia: number | null
   cantidad_ahorrada: number
   comentarios: string | null
   created_at: string
   grupo: {
     nombre_grupo: string
+    numero_total_miembros: number
   }
   ano?: number
 }
@@ -47,6 +51,8 @@ export default function ReportsPage() {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1)
 
   const fetchReports = async () => {
     try {
@@ -63,11 +69,13 @@ export default function ReportsPage() {
           ano,
           grupo_id,
           numero_reuniones,
+          promedio_asistencia,
           cantidad_ahorrada,
           comentarios,
           created_at,
           grupos_ahorro (
-            nombre_grupo
+            nombre_grupo,
+            numero_total_miembros
           )
         `)
         .eq('facilitador_id', user.id)
@@ -85,13 +93,17 @@ export default function ReportsPage() {
           mes: report.mes,
           grupo_id: report.grupo_id,
           numero_reuniones: report.numero_reuniones,
+          promedio_asistencia: report.promedio_asistencia,
           cantidad_ahorrada: report.cantidad_ahorrada,
           comentarios: report.comentarios,
           created_at: report.created_at,
           grupo: {
             nombre_grupo: (Array.isArray(report.grupos_ahorro) 
               ? report.grupos_ahorro[0] 
-              : report.grupos_ahorro)?.nombre_grupo || 'Grupo desconocido'
+              : report.grupos_ahorro)?.nombre_grupo || 'Grupo desconocido',
+            numero_total_miembros: (Array.isArray(report.grupos_ahorro) 
+              ? report.grupos_ahorro[0] 
+              : report.grupos_ahorro)?.numero_total_miembros || 0
           },
           ano: report.ano
         }
@@ -108,6 +120,37 @@ export default function ReportsPage() {
   useEffect(() => {
     fetchReports()
   }, [])
+
+  // Calculate monthly summary
+  const monthlySummary = useMemo(() => {
+    const filteredReports = reports.filter(
+      r => r.ano === selectedYear && r.mes === selectedMonth
+    )
+
+    if (filteredReports.length === 0) {
+      return null
+    }
+
+    // Get unique groups to avoid counting members twice
+    const uniqueGroups = new Map<number, number>()
+    filteredReports.forEach(r => {
+      if (!uniqueGroups.has(r.grupo_id)) {
+        uniqueGroups.set(r.grupo_id, r.grupo.numero_total_miembros)
+      }
+    })
+
+    const totalMembers = Array.from(uniqueGroups.values()).reduce((sum, count) => sum + count, 0)
+    const totalAttendance = filteredReports.reduce((sum, r) => sum + (r.promedio_asistencia || 0), 0)
+    const totalSavings = filteredReports.reduce((sum, r) => sum + r.cantidad_ahorrada, 0)
+
+    return {
+      reportCount: filteredReports.length,
+      groupCount: uniqueGroups.size,
+      totalMembers,
+      totalAttendance,
+      totalSavings
+    }
+  }, [reports, selectedYear, selectedMonth])
 
   const handleSuccess = () => {
     setDialogOpen(false)
@@ -175,6 +218,93 @@ export default function ReportsPage() {
         </Button>
       </div>
 
+      {/* Month/Year Filter */}
+      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+        <CardHeader>
+          <CardTitle className="text-lg">Resumen Mensual</CardTitle>
+          <CardDescription>Selecciona un mes y año para ver estadísticas agregadas</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Año</label>
+              <Input
+                type="number"
+                min={2020}
+                max={2100}
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value) || new Date().getFullYear())}
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mes</label>
+              <Select 
+                value={selectedMonth.toString()} 
+                onValueChange={(value) => setSelectedMonth(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthNames.map((name, index) => (
+                    <SelectItem key={index + 1} value={(index + 1).toString()}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {monthlySummary ? (
+            <div className="mt-4 p-4 bg-background rounded-lg border">
+              <h3 className="font-semibold mb-3 text-lg">
+                {monthNames[selectedMonth - 1]} {selectedYear}
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <FileText className="h-3 w-3" /> Reportes
+                  </p>
+                  <p className="text-2xl font-bold">{monthlySummary.reportCount}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Users className="h-3 w-3" /> Grupos
+                  </p>
+                  <p className="text-2xl font-bold">{monthlySummary.groupCount}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Users className="h-3 w-3" /> Total Miembros
+                  </p>
+                  <p className="text-2xl font-bold">{monthlySummary.totalMembers}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Users className="h-3 w-3" /> Promedio Asistencia
+                  </p>
+                  <p className="text-2xl font-bold">{monthlySummary.totalAttendance}</p>
+                </div>
+                <div className="space-y-1 md:col-span-2">
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3" /> Total Ahorrado
+                  </p>
+                  <p className="text-2xl font-bold text-green-600">
+                    ${monthlySummary.totalSavings.toLocaleString('es-CO')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 p-4 bg-muted rounded-lg text-center text-muted-foreground">
+              No hay reportes para {monthNames[selectedMonth - 1]} {selectedYear}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {reports.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16">
@@ -207,6 +337,16 @@ export default function ReportsPage() {
                   <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Reuniones:</span>
                   <span className="ml-auto font-medium">{report.numero_reuniones}</span>
+                </div>
+                <div className="flex items-center text-sm">
+                  <Users className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Total Miembros:</span>
+                  <span className="ml-auto font-medium">{report.grupo.numero_total_miembros}</span>
+                </div>
+                <div className="flex items-center text-sm">
+                  <Users className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Promedio Asistencia:</span>
+                  <span className="ml-auto font-medium">{report.promedio_asistencia || 0}</span>
                 </div>
                 <div className="flex items-center text-sm">
                   <TrendingUp className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -261,6 +401,7 @@ export default function ReportsPage() {
           ano: selectedReport.ano || new Date(selectedReport.created_at).getFullYear(),
           mes: selectedReport.mes,
           numero_reuniones: selectedReport.numero_reuniones,
+          promedio_asistencia: selectedReport.promedio_asistencia || undefined,
           cantidad_ahorrada: selectedReport.cantidad_ahorrada,
           comentarios: selectedReport.comentarios || '',
         } : undefined}

@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { FileText, Calendar, TrendingUp, Loader2, Edit, Trash2 } from 'lucide-react'
+import { FileText, Calendar, TrendingUp, Loader2, Edit, Trash2, Users } from 'lucide-react'
 import { CreateReportDialog } from '@/components/CreateReportDialog'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -32,9 +32,13 @@ interface Report {
   mes: number
   ano: number
   numero_reuniones: number
+  promedio_asistencia: number | null
   cantidad_ahorrada: number
   comentarios: string | null
   created_at: string
+  grupos_ahorro?: {
+    numero_total_miembros: number
+  }
 }
 
 interface GroupReportsDialogProps {
@@ -67,7 +71,12 @@ export function GroupReportsDialog({ open, onOpenChange, groupId, groupName }: G
 
     const { data, error } = await supabase
       .from('reportes_grupos')
-      .select('*')
+      .select(`
+        *,
+        grupos_ahorro (
+          numero_total_miembros
+        )
+      `)
       .eq('grupo_id', groupId)
       .order('created_at', { ascending: false })
 
@@ -161,6 +170,20 @@ export function GroupReportsDialog({ open, onOpenChange, groupId, groupName }: G
                         </span>
                         <span className="font-medium">{report.numero_reuniones}</span>
                       </div>
+                      {report.grupos_ahorro && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground flex items-center gap-1">
+                            <Users className="h-3 w-3" /> Total Miembros:
+                          </span>
+                          <span className="font-medium">{report.grupos_ahorro.numero_total_miembros || 0}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <Users className="h-3 w-3" /> Promedio Asistencia:
+                        </span>
+                        <span className="font-medium">{report.promedio_asistencia || 0}</span>
+                      </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground flex items-center gap-1">
                           <TrendingUp className="h-3 w-3" /> Ahorrado:
@@ -214,6 +237,7 @@ export function GroupReportsDialog({ open, onOpenChange, groupId, groupName }: G
           ano: selectedReport.ano,
           mes: selectedReport.mes,
           numero_reuniones: selectedReport.numero_reuniones,
+          promedio_asistencia: selectedReport.promedio_asistencia || undefined,
           cantidad_ahorrada: selectedReport.cantidad_ahorrada,
           comentarios: selectedReport.comentarios || '',
         } : undefined}

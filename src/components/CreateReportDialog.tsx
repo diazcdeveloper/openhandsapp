@@ -36,6 +36,7 @@ import { toast } from "sonner"
 interface Group {
   id: number
   nombre_grupo: string
+  numero_total_miembros: number
 }
 
 interface CreateReportDialogProps {
@@ -52,6 +53,7 @@ const formSchema = z.object({
   ano: z.number().min(2020, 'Año inválido').max(2100, 'Año inválido'),
   mes: z.number().min(1, 'Mes debe ser entre 1 y 12').max(12, 'Mes debe ser entre 1 y 12'),
   numero_reuniones: z.number().min(0, 'Debe ser un número positivo'),
+  promedio_asistencia: z.number().min(0, 'Debe ser un número positivo'),
   cantidad_ahorrada: z.number().min(0, 'Debe ser un número positivo'),
   comentarios: z.string().optional(),
 })
@@ -69,6 +71,7 @@ export function CreateReportDialog({ open, onOpenChange, onSuccess, userId, init
       ano: initialData?.ano || new Date().getFullYear(),
       mes: initialData?.mes || new Date().getMonth() + 1,
       numero_reuniones: initialData?.numero_reuniones || (initialData?.numero_reuniones === 0 ? 0 : undefined),
+      promedio_asistencia: initialData?.promedio_asistencia || (initialData?.promedio_asistencia === 0 ? 0 : undefined),
       cantidad_ahorrada: initialData?.cantidad_ahorrada || (initialData?.cantidad_ahorrada === 0 ? 0 : undefined),
       comentarios: initialData?.comentarios || '',
     },
@@ -80,7 +83,7 @@ export function CreateReportDialog({ open, onOpenChange, onSuccess, userId, init
 
       const { data, error } = await supabase
         .from('grupos_ahorro')
-        .select('id, nombre_grupo')
+        .select('id, nombre_grupo, numero_total_miembros')
         .eq('facilitador_id', userId)
         .order('nombre_grupo')
 
@@ -98,6 +101,7 @@ export function CreateReportDialog({ open, onOpenChange, onSuccess, userId, init
           ano: initialData.ano || new Date().getFullYear(),
           mes: initialData.mes || new Date().getMonth() + 1,
           numero_reuniones: initialData.numero_reuniones || (initialData.numero_reuniones === 0 ? 0 : undefined),
+          promedio_asistencia: initialData.promedio_asistencia || (initialData.promedio_asistencia === 0 ? 0 : undefined),
           cantidad_ahorrada: initialData.cantidad_ahorrada || (initialData.cantidad_ahorrada === 0 ? 0 : undefined),
           comentarios: initialData.comentarios || '',
         })
@@ -122,6 +126,7 @@ export function CreateReportDialog({ open, onOpenChange, onSuccess, userId, init
         mes: values.mes,
         ano: values.ano,
         numero_reuniones: values.numero_reuniones,
+        promedio_asistencia: values.promedio_asistencia,
         cantidad_ahorrada: values.cantidad_ahorrada,
         comentarios: values.comentarios || null,
       }
@@ -176,26 +181,35 @@ export function CreateReportDialog({ open, onOpenChange, onSuccess, userId, init
             <FormField
               control={form.control}
               name="grupo_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Grupo de Ahorro</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona un grupo" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {groups.map((group) => (
-                        <SelectItem key={group.id} value={group.id.toString()}>
-                          {group.nombre_grupo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const selectedGroup = groups.find(g => g.id.toString() === field.value)
+                
+                return (
+                  <FormItem>
+                    <FormLabel>Grupo de Ahorro</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un grupo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {groups.map((group) => (
+                          <SelectItem key={group.id} value={group.id.toString()}>
+                            {group.nombre_grupo}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedGroup && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Total Miembros: {selectedGroup.numero_total_miembros || 0}
+                      </p>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )
+              }}
             />
 
             <div className="grid grid-cols-2 gap-4">
@@ -260,6 +274,26 @@ export function CreateReportDialog({ open, onOpenChange, onSuccess, userId, init
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Número de Reuniones</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="promedio_asistencia"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Promedio de Asistencia</FormLabel>
                   <FormControl>
                     <Input
                       type="number"

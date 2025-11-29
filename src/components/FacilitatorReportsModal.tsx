@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { FileText, Calendar, TrendingUp, Loader2, Edit, Trash2 } from 'lucide-react'
+import { FileText, Calendar, TrendingUp, Loader2, Edit, Trash2, Users } from 'lucide-react'
 import { CreateReportDialog } from '@/components/CreateReportDialog'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -32,12 +32,14 @@ interface Report {
   mes: number
   ano: number
   numero_reuniones: number
+  promedio_asistencia: number | null
   cantidad_ahorrada: number
   comentarios: string | null
   created_at: string
   grupo_id: number
   grupos_ahorro?: {
     nombre_grupo: string
+    numero_total_miembros: number
   }
 }
 
@@ -96,7 +98,8 @@ export function FacilitatorReportsModal({
         .select(`
           *,
           grupos_ahorro (
-            nombre_grupo
+            nombre_grupo,
+            numero_total_miembros
           )
         `)
         .in('grupo_id', groupIds)
@@ -269,12 +272,21 @@ export function FacilitatorReportsModal({
                               <p className="font-medium">{report.numero_reuniones}</p>
                             </div>
                             <div>
+                              <span className="text-muted-foreground">Total Miembros:</span>
+                              <p className="font-medium">{report.grupos_ahorro?.numero_total_miembros || 0}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Promedio Asistencia:</span>
+                              <p className="font-medium">{report.promedio_asistencia || 0}</p>
+                            </div>
+                            <div>
                               <span className="text-muted-foreground">Cantidad ahorrada:</span>
                               <p className="font-medium text-green-600">
                                 ${Number(report.cantidad_ahorrada).toLocaleString('es-CO')}
                               </p>
                             </div>
                           </div>
+
                           {report.comentarios && (
                             <div className="mt-3 pt-3 border-t">
                               <span className="text-muted-foreground text-sm">Comentarios:</span>
@@ -302,6 +314,7 @@ export function FacilitatorReportsModal({
           initialData={{
             ...selectedReport,
             grupo_id: selectedReport.grupo_id.toString(),
+            promedio_asistencia: selectedReport.promedio_asistencia || undefined,
             comentarios: selectedReport.comentarios || undefined
           }}
         />
