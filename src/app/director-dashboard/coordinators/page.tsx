@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, FolderOpen, PiggyBank, MapPin } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext'
+import { useAuth } from '../../../context/AuthContext'
 
 interface CoordinatorStats {
   id: string

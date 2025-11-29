@@ -68,7 +68,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-900">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Fundación Open Hands</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">Open Hands App</CardTitle>
           <CardDescription className="text-center">
             Ingresa tus credenciales para acceder
           </CardDescription>

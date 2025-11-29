@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, Search, PiggyBank, FileText, Users } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext'
+import { useAuth } from '../../../context/AuthContext'
 import { toast } from 'sonner'
 
 export default function DirectorReportsPage() {
@@ -38,25 +38,24 @@ export default function DirectorReportsPage() {
         return
       }
 
-      // Get all facilitators in the country
-      const { data: facilitators } = await supabase
-        .from('usuarios')
+      // Get all groups in the country
+      const { data: groups } = await supabase
+        .from('grupos_ahorro')
         .select('id')
-        .eq('pais_residencia', directorData.pais_residencia)
-        .eq('rol', 'facilitador')
+        .eq('pais_operacion', directorData.pais_residencia)
 
-      const facilitatorIds = facilitators?.map(f => f.id) || []
+      const groupIds = groups?.map(g => g.id) || []
 
-      if (facilitatorIds.length === 0) {
+      if (groupIds.length === 0) {
         setReportData({ totalSaved: 0, reportsCount: 0, groupsReporting: 0 })
         return
       }
 
-      // Get reports filtered by year, month and facilitators
+      // Get reports filtered by year, month and groups
       const { data: reports } = await supabase
         .from('reportes_grupos')
         .select('cantidad_ahorrada, grupo_id')
-        .in('facilitador_id', facilitatorIds)
+        .in('grupo_id', groupIds)
         .eq('ano', parseInt(year))
         .eq('mes', parseInt(month))
 
