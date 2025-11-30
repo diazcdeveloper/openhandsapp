@@ -12,6 +12,8 @@ import { useAuth } from '../../../context/AuthContext'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { PDFDownloadLink } from '@react-pdf/renderer'
+import { DirectorReportPDF } from '@/components/DirectorReportPDF'
 
 interface Report {
   id: number
@@ -27,11 +29,32 @@ interface Report {
     nombre_grupo: string
     facilitador_id: string
     numero_total_miembros: number
+    tipo_ahorro: 'Simple' | 'Rosca' | 'Asca'
+    grupo_juvenil: boolean
+    cantidad_hombres: number
+    cantidad_mujeres: number
+    cantidad_ninos: number
+    cantidad_ninas: number
   }
   facilitador?: {
     nombre: string
     apellido: string
   }
+}
+
+interface Group {
+  id: number
+  facilitador_id: string
+  nombre_grupo: string
+  numero_total_miembros: number
+  tipo_ahorro: 'Simple' | 'Rosca' | 'Asca'
+  grupo_juvenil: boolean
+  cantidad_hombres: number
+  cantidad_mujeres: number
+  cantidad_ninos: number
+  cantidad_ninas: number
+  ano_creacion: number
+  mes_creacion: number
 }
 
 const monthNames = [
@@ -46,10 +69,12 @@ import { Suspense } from 'react'
 function ReportsContent() {
   const { user } = useAuth()
   const [reports, setReports] = useState<Report[]>([])
+  const [groups, setGroups] = useState<Group[]>([])
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const [directorCountry, setDirectorCountry] = useState<string>('')
+  const [directorName, setDirectorName] = useState<string>('')
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1)
 
@@ -62,7 +87,7 @@ function ReportsContent() {
         // Get director's country
         const { data: directorData } = await supabase
           .from('usuarios')
-          .select('pais_residencia')
+          .select('pais_residencia, nombre, apellido')
           .eq('id', user.id)
           .single()
 
@@ -73,19 +98,37 @@ function ReportsContent() {
         }
 
         setDirectorCountry(directorData.pais_residencia)
+        setDirectorName(`${directorData.nombre} ${directorData.apellido}`)
 
         // Get all groups in the country
         const { data: groupsData } = await supabase
           .from('grupos_ahorro')
-          .select('id, facilitador_id, nombre_grupo, numero_total_miembros')
+          .select(`
+            id, 
+            facilitador_id, 
+            nombre_grupo, 
+            numero_total_miembros,
+            tipo_ahorro,
+            grupo_juvenil,
+            cantidad_hombres,
+            cantidad_mujeres,
+            cantidad_ninos,
+            cantidad_ninas,
+            ano_creacion,
+            mes_creacion
+          `)
           .eq('pais_operacion', directorData.pais_residencia)
 
         if (!groupsData || groupsData.length === 0) {
           setReports([])
+          setGroups([])
           setTotalCount(0)
           setLoading(false)
           return
         }
+
+        // Store groups in state with correct type
+        setGroups(groupsData as unknown as Group[])
 
         const groupIds = groupsData.map(g => g.id)
 
@@ -120,7 +163,13 @@ function ReportsContent() {
               grupos_ahorro: group ? { 
                 nombre_grupo: group.nombre_grupo, 
                 facilitador_id: group.facilitador_id,
-                numero_total_miembros: group.numero_total_miembros 
+                numero_total_miembros: group.numero_total_miembros,
+                tipo_ahorro: group.tipo_ahorro,
+                grupo_juvenil: group.grupo_juvenil,
+                cantidad_hombres: group.cantidad_hombres,
+                cantidad_mujeres: group.cantidad_mujeres,
+                cantidad_ninos: group.cantidad_ninos,
+                cantidad_ninas: group.cantidad_ninas
               } : undefined
             }
           }) || []
@@ -141,49 +190,108 @@ function ReportsContent() {
 
   // Calculate monthly summary
   const monthlySummary = useMemo(() => {
+    // Filter reports for the selected month/year
     const filteredReports = reports.filter(
       r => r.ano === selectedYear && r.mes === selectedMonth
     )
 
-    if (filteredReports.length === 0) {
-      return null
-    }
-
-    // Get unique groups to avoid counting members twice
-    const uniqueGroups = new Map<number, number>()
-    filteredReports.forEach(r => {
-      if (r.grupos_ahorro && !uniqueGroups.has(r.grupo_id as any)) {
-        const groupKey = `${r.grupos_ahorro.facilitador_id}_${r.grupos_ahorro.nombre_grupo}`
-        if (!uniqueGroups.has(groupKey as any)) {
-          uniqueGroups.set(groupKey as any, r.grupos_ahorro.numero_total_miembros)
-        }
-      }
+    // Filter groups that existed in the selected month/year
+    const activeGroups = groups.filter(g => {
+      if (!g.ano_creacion) return false
+      if (g.ano_creacion < selectedYear) return true
+      if (g.ano_creacion === selectedYear && (g.mes_creacion || 0) <= selectedMonth) return true
+      return false
     })
 
-    const totalMembers = Array.from(uniqueGroups.values()).reduce((sum, count) => sum + count, 0)
+    if (activeGroups.length === 0 && filteredReports.length === 0) {
+      return null
+    }
+    
+    // Calculate metrics based on ACTIVE GROUPS (not just reporting groups)
+    const totalMembers = activeGroups.reduce((sum, g) => sum + g.numero_total_miembros, 0)
+    
+    // Financial metrics still come from reports
     const totalAttendance = filteredReports.reduce((sum, r) => sum + (r.promedio_asistencia || 0), 0)
     const totalSavings = filteredReports.reduce((sum, r) => sum + r.cantidad_ahorrada, 0)
 
+    // Group types counts from ACTIVE GROUPS
+    const ascaCount = activeGroups.filter(g => g.tipo_ahorro === 'Asca').length
+    const roscaCount = activeGroups.filter(g => g.tipo_ahorro === 'Rosca').length
+    const simpleCount = activeGroups.filter(g => g.tipo_ahorro === 'Simple').length
+    const youthCount = activeGroups.filter(g => g.grupo_juvenil).length
+
+    // Demographics from ACTIVE GROUPS
+    const totalMen = activeGroups.reduce((sum, g) => sum + (g.cantidad_hombres || 0), 0)
+    const totalWomen = activeGroups.reduce((sum, g) => sum + (g.cantidad_mujeres || 0), 0)
+    const totalChildren = activeGroups.reduce((sum, g) => sum + (g.cantidad_ninos || 0) + (g.cantidad_ninas || 0), 0)
+
+    // Savings by type from REPORTS (filtered by month)
+    const savingsByType = filteredReports.reduce((acc, r) => {
+      if (r.grupos_ahorro) {
+        const type = r.grupos_ahorro.tipo_ahorro
+        acc[type] = (acc[type] || 0) + r.cantidad_ahorrada
+        if (r.grupos_ahorro.grupo_juvenil) {
+          acc.youth = (acc.youth || 0) + r.cantidad_ahorrada
+        }
+      }
+      return acc
+    }, { Asca: 0, Rosca: 0, Simple: 0, youth: 0 } as { Asca: number; Rosca: number; Simple: number; youth: number })
+
     return {
       reportCount: filteredReports.length,
-      groupCount: uniqueGroups.size,
+      groupCount: activeGroups.length,
       totalMembers,
       totalAttendance,
-      totalSavings
+      totalSavings,
+      ascaCount,
+      roscaCount,
+      simpleCount,
+      youthCount,
+      totalMen,
+      totalWomen,
+      totalChildren,
+      savingsByType
     }
-  }, [reports, selectedYear, selectedMonth])
+  }, [reports, groups, selectedYear, selectedMonth])
 
   return (
     <div className="p-8 pt-20 md:pt-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Reportes</h1>
-        <p className="text-muted-foreground">
-          Reportes mensuales de {directorCountry}
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Reportes</h1>
+          <p className="text-muted-foreground">
+            Reportes mensuales de {directorCountry}
+          </p>
+        </div>
+        {monthlySummary && (
+          <PDFDownloadLink
+            document={
+              <DirectorReportPDF
+                monthlySummary={monthlySummary}
+                month={monthNames[selectedMonth - 1]}
+                year={selectedYear}
+                country={directorCountry}
+                directorName={directorName}
+              />
+            }
+            fileName={`Reporte_Mensual_${monthNames[selectedMonth - 1]}_${selectedYear}.pdf`}
+          >
+            {({ blob, url, loading, error }) => (
+              <Button disabled={loading} className="gap-2">
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="h-4 w-4" />
+                )}
+                {loading ? 'Generando PDF...' : 'Descargar PDF'}
+              </Button>
+            )}
+          </PDFDownloadLink>
+        )}
       </div>
 
       {/* Month/Year Filter */}
-      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+      <Card className="border-primary/20 bg-white">
         <CardHeader>
           <CardTitle className="text-lg">Resumen Mensual - {directorCountry}</CardTitle>
           <CardDescription>Selecciona un mes y año para ver estadísticas agregadas del país</CardDescription>
@@ -222,47 +330,125 @@ function ReportsContent() {
           </div>
 
           {monthlySummary ? (
-            <div className="mt-4 p-4 bg-background rounded-lg border">
-              <h3 className="font-semibold mb-3 text-lg">
-                {monthNames[selectedMonth - 1]} {selectedYear}
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <FileText className="h-3 w-3" /> Reportes
-                  </p>
-                  <p className="text-2xl font-bold">{monthlySummary.reportCount}</p>
+            <div className="mt-8 space-y-6 border-t pt-6">
+              <div>
+                <h3 className="font-semibold mb-4 text-lg">
+                  Resumen General - {monthNames[selectedMonth - 1]} {selectedYear}
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="space-y-1 p-3 bg-muted/30 rounded-lg">
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <FileText className="h-3 w-3" /> Reportes
+                    </p>
+                    <p className="text-2xl font-bold">{monthlySummary.reportCount}</p>
+                  </div>
+                  <div className="space-y-1 p-3 bg-muted/30 rounded-lg">
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Users className="h-3 w-3" /> Grupos
+                    </p>
+                    <p className="text-2xl font-bold">{monthlySummary.groupCount}</p>
+                  </div>
+                  <div className="space-y-1 p-3 bg-muted/30 rounded-lg">
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Users className="h-3 w-3" /> Total Miembros
+                    </p>
+                    <p className="text-2xl font-bold">{monthlySummary.totalMembers}</p>
+                  </div>
+                  <div className="space-y-1 p-3 bg-muted/30 rounded-lg">
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Users className="h-3 w-3" /> Promedio Asistencia
+                    </p>
+                    <p className="text-2xl font-bold">{monthlySummary.totalAttendance}</p>
+                  </div>
+                  <div className="space-y-1 md:col-span-4 p-3 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-100 dark:border-green-900/30">
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" /> Total Ahorrado
+                    </p>
+                    <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                      ${monthlySummary.totalSavings.toLocaleString('es-CO')}
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Users className="h-3 w-3" /> Grupos
-                  </p>
-                  <p className="text-2xl font-bold">{monthlySummary.groupCount}</p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Group Types & Demographics */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wider">Tipos de Grupo</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-muted/30 p-3 rounded-lg border">
+                        <span className="text-xs text-muted-foreground block mb-1">ASCA</span>
+                        <span className="text-xl font-bold">{monthlySummary.ascaCount}</span>
+                      </div>
+                      <div className="bg-muted/30 p-3 rounded-lg border">
+                        <span className="text-xs text-muted-foreground block mb-1">ROSCA</span>
+                        <span className="text-xl font-bold">{monthlySummary.roscaCount}</span>
+                      </div>
+                      <div className="bg-muted/30 p-3 rounded-lg border">
+                        <span className="text-xs text-muted-foreground block mb-1">Simple</span>
+                        <span className="text-xl font-bold">{monthlySummary.simpleCount}</span>
+                      </div>
+                      <div className="bg-blue-50 dark:bg-blue-900/10 p-3 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                        <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">Juveniles</span>
+                        <span className="text-xl font-bold text-blue-700 dark:text-blue-300">{monthlySummary.youthCount}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wider">Demografía</h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="text-center p-3 bg-muted/30 rounded-lg border">
+                        <span className="text-xs text-muted-foreground block mb-1">Hombres</span>
+                        <span className="text-xl font-bold">{monthlySummary.totalMen}</span>
+                      </div>
+                      <div className="text-center p-3 bg-muted/30 rounded-lg border">
+                        <span className="text-xs text-muted-foreground block mb-1">Mujeres</span>
+                        <span className="text-xl font-bold">{monthlySummary.totalWomen}</span>
+                      </div>
+                      <div className="text-center p-3 bg-muted/30 rounded-lg border">
+                        <span className="text-xs text-muted-foreground block mb-1">Niños/as</span>
+                        <span className="text-xl font-bold">{monthlySummary.totalChildren}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Users className="h-3 w-3" /> Total Miembros
-                  </p>
-                  <p className="text-2xl font-bold">{monthlySummary.totalMembers}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Users className="h-3 w-3" /> Promedio Asistencia
-                  </p>
-                  <p className="text-2xl font-bold">{monthlySummary.totalAttendance}</p>
-                </div>
-                <div className="space-y-1 md:col-span-2">
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3" /> Total Ahorrado
-                  </p>
-                  <p className="text-2xl font-bold text-green-600">
-                    ${monthlySummary.totalSavings.toLocaleString('es-CO')}
-                  </p>
+
+                {/* Savings Breakdown */}
+                <div>
+                  <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wider">Ahorro por Tipo</h4>
+                  <div className="space-y-3 bg-muted/30 p-4 rounded-lg border">
+                    <div className="flex justify-between items-center pb-3 border-b border-dashed">
+                      <span className="text-sm">Grupos ASCA</span>
+                      <span className="font-bold text-green-600 dark:text-green-400">
+                        ${monthlySummary.savingsByType.Asca.toLocaleString('es-CO')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pb-3 border-b border-dashed">
+                      <span className="text-sm">Grupos ROSCA</span>
+                      <span className="font-bold text-green-600 dark:text-green-400">
+                        ${monthlySummary.savingsByType.Rosca.toLocaleString('es-CO')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pb-3 border-b border-dashed">
+                      <span className="text-sm">Grupos Simple</span>
+                      <span className="font-bold text-green-600 dark:text-green-400">
+                        ${monthlySummary.savingsByType.Simple.toLocaleString('es-CO')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pt-1">
+                      <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Grupos Juveniles</span>
+                      <span className="font-bold text-blue-600 dark:text-blue-400">
+                        ${monthlySummary.savingsByType.youth.toLocaleString('es-CO')}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="mt-4 p-4 bg-muted rounded-lg text-center text-muted-foreground">
+            <div className="mt-8 p-8 bg-muted/30 rounded-lg text-center text-muted-foreground border border-dashed">
               No hay reportes para {monthNames[selectedMonth - 1]} {selectedYear}
             </div>
           )}

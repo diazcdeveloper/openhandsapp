@@ -226,23 +226,24 @@ export function GroupReportsDialog({ open, onOpenChange, groupId, groupName }: G
         </DialogContent>
       </Dialog>
 
-      {/* Edit Report Dialog */}
-      <CreateReportDialog
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        onSuccess={handleEditSuccess}
-        userId={userId}
-        initialData={selectedReport ? {
-          grupo_id: groupId.toString(),
-          ano: selectedReport.ano,
-          mes: selectedReport.mes,
-          numero_reuniones: selectedReport.numero_reuniones,
-          promedio_asistencia: selectedReport.promedio_asistencia || undefined,
-          cantidad_ahorrada: selectedReport.cantidad_ahorrada,
-          comentarios: selectedReport.comentarios || '',
-        } : undefined}
-        reportId={selectedReport?.id}
-      />
+      {selectedReport && (
+        <CreateReportDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onSuccess={handleEditSuccess}
+          userId={userId}
+          reportId={selectedReport.id}
+          initialData={{
+            grupo_id: groupId.toString(),
+            ano: selectedReport.ano,
+            mes: selectedReport.mes,
+            numero_reuniones: selectedReport.numero_reuniones,
+            promedio_asistencia: selectedReport.promedio_asistencia || 0,
+            cantidad_ahorrada: selectedReport.cantidad_ahorrada,
+            comentarios: selectedReport.comentarios || '',
+          }}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

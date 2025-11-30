@@ -36,6 +36,15 @@ interface SavingsGroupCardProps {
     numero_total_miembros?: number
     tipo_ahorro?: 'Simple' | 'Rosca' | 'Asca'
     grupo_juvenil?: boolean
+    mes_creacion?: number
+    duracion_ciclo?: number
+    cantidad_hombres?: number
+    cantidad_mujeres?: number
+    cantidad_ninos?: number
+    cantidad_ninas?: number
+    ano_creacion?: number
+    ciudad_operacion?: string
+    pais_operacion?: string
     ciclos_ahorro?: Array<{
       id: number
       nombre_ciclo: string

@@ -25,6 +25,15 @@ interface SavingsGroup {
   numero_total_miembros: number
   tipo_ahorro?: 'Simple' | 'Rosca' | 'Asca'
   grupo_juvenil?: boolean
+  mes_creacion?: number
+  duracion_ciclo?: number
+  cantidad_hombres?: number
+  cantidad_mujeres?: number
+  cantidad_ninos?: number
+  cantidad_ninas?: number
+  ano_creacion?: number
+  ciudad_operacion?: string
+  pais_operacion?: string
   ciclos_ahorro: {
     id: number
     nombre_ciclo: string
@@ -54,6 +63,15 @@ export function FacilitatorGroupsModal({
           numero_total_miembros,
           tipo_ahorro,
           grupo_juvenil,
+          mes_creacion,
+          duracion_ciclo,
+          cantidad_hombres,
+          cantidad_mujeres,
+          cantidad_ninos,
+          cantidad_ninas,
+          ano_creacion,
+          ciudad_operacion,
+          pais_operacion,
           ciclos_ahorro (
             id,
             nombre_ciclo,
